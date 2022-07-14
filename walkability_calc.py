@@ -208,3 +208,35 @@ class WalkabilityCalc:
             shadeLayer = self.dlg.comboBoxShadeLayer.currentLayer()
             print(streetLayer)
             print(shadeLayer)
+
+            # generate sidewalk layer
+
+            # create first buffer from street layers
+            processing.run("native:buffer", {'INPUT':'C:\\Users\\guymo\\Desktop\\roads_hulon.shp','DISTANCE':10,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
+
+            # create the second buffer from street layers
+            processing.run("native:buffer", {'INPUT':'C:\\Users\\guymo\\Desktop\\roads_hulon.shp','DISTANCE':7,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
+
+            # calc the diffrence between the layers
+            processing.run("native:difference", {'INPUT':'C:/Users/guymo/Desktop/10_buffer.shp','OVERLAY':'C:/Users/guymo/Desktop/7_buffer.shp','OUTPUT':'TEMPORARY_OUTPUT'})
+
+            # saperate the sidewalks
+            processing.run("native:multiparttosingleparts", {'INPUT':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={0b7b12d3-36bb-4380-8744-c6fbeba3ce7b}','OUTPUT':'TEMPORARY_OUTPUT'})
+
+            # TODO manually create filter layer of paths TODO!!!
+
+            # Create sidewalks of "paths"
+            processing.run("native:buffer", {'INPUT':'C:/Users/guymo/Desktop/roads_hulon.shp|subset="fclass" = \'path\'','DISTANCE':2,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
+
+            # TODO create sidewalks of "foorways" (the same as path)
+
+            # Combine the layers
+            processing.run("native:union", {'INPUT':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={d04dae53-b545-456b-8e44-f86a0aa98c38}','OVERLAY':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={0b7b12d3-36bb-4380-8744-c6fbeba3ce7b}','OVERLAY_FIELDS_PREFIX':'','OUTPUT':'TEMPORARY_OUTPUT'})
+
+            # 2. Create Fishnet
+            processing.run("native:creategrid", {'TYPE':2,'EXTENT':'34.754904527,34.814474993,31.991246985,32.039059885 [EPSG:4326]','HSPACING':1,'VSPACING':1,'HOVERLAY':0,'VOVERLAY':0,'CRS':QgsCoordinateReferenceSystem('EPSG:2039'),'OUTPUT':'TEMPORARY_OUTPUT'})
+
+            # TODO "Create Spatial Index" of the Grid layer!!!
+
+            # 3. Intersect grid with total sidewalks
+            processing.run("native:selectbylocation", {'INPUT':'Polygon?crs=EPSG:2039&field=id:long(0,0)&field=left:double(0,0)&field=top:double(0,0)&field=right:double(0,0)&field=bottom:double(0,0)&uid={26b601be-5f90-4d39-ad07-a20fe696872c}','PREDICATE':[0],'INTERSECT':'C:\\Users\\guymo\\Desktop\\union.shp|layername=union','METHOD':0})
