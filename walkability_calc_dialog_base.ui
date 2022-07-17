@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Walkability calculator</string>
   </property>
-  <widget class="QgsMapLayerComboBox" name="comboBoxStreetLayer">
+  <widget class="QgsMapLayerComboBox" name="comboBoxGvulLayer">
    <property name="geometry">
     <rect>
      <x>30</x>
@@ -33,30 +33,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>street layer</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_2">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>110</y>
-     <width>201</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>shaded layer</string>
-   </property>
-  </widget>
-  <widget class="QgsMapLayerComboBox" name="comboBoxShadeLayer">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>130</y>
-     <width>201</width>
-     <height>27</height>
-    </rect>
+    <string>Gvul Layer</string>
    </property>
   </widget>
   <widget class="QDialogButtonBox" name="button_box">
@@ -70,6 +47,29 @@
    </property>
    <property name="standardButtons">
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>100</y>
+     <width>201</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Osm Roads Layers</string>
+   </property>
+  </widget>
+  <widget class="QgsMapLayerComboBox" name="comboBoxOsmRoadsLayer">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>120</y>
+     <width>201</width>
+     <height>27</height>
+    </rect>
    </property>
   </widget>
  </widget>

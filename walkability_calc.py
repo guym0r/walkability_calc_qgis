@@ -24,15 +24,17 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.core import QgsMapLayerProxyModel, Qgis
+from qgis.core import QgsMapLayerProxyModel, Qgis, QgsProject
 
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
 from .walkability_calc_dialog import WalkabilityCalcDialog
 import os.path
-import os
+import processing
+from .config import *
 
+DEBUG = True
 
 class WalkabilityCalc:
     """QGIS Plugin Implementation."""
@@ -181,6 +183,78 @@ class WalkabilityCalc:
                 action)
             self.iface.removeToolBarIcon(action)
 
+    def _intersenct(self, input_layer, overlay_layer, layer_name):
+        result_layer = processing.run("native:intersection", {'INPUT':input_layer,'OVERLAY':overlay_layer,'INPUT_FIELDS':[],'OVERLAY_FIELDS':[],'OVERLAY_FIELDS_PREFIX':'','OUTPUT':'TEMPORARY_OUTPUT'})['OUTPUT']
+
+        #result_layer.setCrs(input_layer.crs())
+        result_layer.setCrs(overlay_layer.crs())
+
+        if DEBUG:
+                print(result_layer)
+                result_layer.setName("DEBUG_"+layer_name)
+                QgsProject.instance().addMapLayer(result_layer)
+        else:
+            result_layer.setName(layer_name)
+
+        return result_layer
+
+    def _buffer(self, input_layer, buffer_distance, layer_name):
+        result_layer = (processing.run("native:buffer", {'INPUT':input_layer,'DISTANCE':buffer_distance,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+        if DEBUG:
+            print(result_layer)
+            result_layer.setName("DEBUG_"+layer_name)
+            QgsProject.instance().addMapLayer(result_layer)
+
+        else:
+            result_layer.setName(layer_name)
+
+        return result_layer
+    
+    def _diffence(self, layer_1, layer_2, layer_name):
+        result_layer = (processing.run("native:difference", {'INPUT': layer_1,'OVERLAY':layer_2,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+        if DEBUG:
+            print(result_layer)
+            result_layer.setName("DEBUG_"+layer_name)
+            QgsProject.instance().addMapLayer(result_layer)
+
+        else:
+            result_layer.setName(layer_name)
+
+        return result_layer
+
+    def _saperate(self, layer, layer_name):
+        result_layer = (processing.run("native:multiparttosingleparts", {'INPUT':layer,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+        if DEBUG:
+            print(result_layer)
+            result_layer.setName("DEBUG_" + layer_name)
+            QgsProject.instance().addMapLayer(result_layer)
+
+        else:
+            result_layer.setName(layer_name)
+
+        return result_layer
+
+    #filter layer:
+    #f = QgsFeatureRequest().setFilterExpression( '"fclass" = \'path\'' )
+
+    def _create_grid(self, input_layer, layer_name):
+        layer_extent = input_layer.extent()
+        extent_str = str(round(layer_extent.xMinimum(),4)) + "," + str(round(layer_extent.xMaximum(),4)) + "," + str(round(layer_extent.yMinimum(),4)) + "," + str(round(layer_extent.yMaximum(),4)) + " [" + input_layer.crs().authid() + "]"
+
+        result_layer = (processing.run("native:creategrid", {'TYPE':2,'EXTENT':'34.754904527,34.814474993,31.991246985,32.039059885 [EPSG:4326]','HSPACING':1,'VSPACING':1,'HOVERLAY':0,'VOVERLAY':0,'CRS':input_layer.crs(),'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+        if DEBUG:
+            print(result_layer)
+            result_layer.setName("DEBUG_" + layer_name)
+            QgsProject.instance().addMapLayer(result_layer)
+
+        else:
+            result_layer.setName(layer_name)
+
+        return result_layer
 
     def run(self):
         """Run method that performs all the real work"""
@@ -191,9 +265,12 @@ class WalkabilityCalc:
             self.first_start = False
             self.dlg = WalkabilityCalcDialog()
 
+            # TODO!!! use CRS from user input 
             print("start first use")
-            self.dlg.comboBoxStreetLayer.setFilters(QgsMapLayerProxyModel.LineLayer)
-            self.dlg.comboBoxShadeLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+            #self.dlg.comboBoxStreetLayer.setFilters(QgsMapLayerProxyModel.LineLayer)
+            #self.dlg.comboBoxShadeLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+            self.dlg.comboBoxGvulLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+            self.dlg.comboBoxOsmRoadsLayer.setFilters(QgsMapLayerProxyModel.LineLayer)
             print("end first use")
 
         # show the dialog
@@ -204,39 +281,67 @@ class WalkabilityCalc:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            streetLayer = self.dlg.comboBoxStreetLayer.currentLayer()
-            shadeLayer = self.dlg.comboBoxShadeLayer.currentLayer()
-            print(streetLayer)
-            print(shadeLayer)
+            gvul_layer = self.dlg.comboBoxGvulLayer.currentLayer()
+            roads_layer = self.dlg.comboBoxOsmRoadsLayer.currentLayer()
+            print(gvul_layer.name())
+            print(roads_layer.name())
 
-            # generate sidewalk layer
-
+            # 0. Intersenct beetwen the layers
+            #roads_hulon = self._intersenct(roads_layer, gvul_layer, "hulon_roads")
+            roads_hulon = QgsProject.instance().mapLayersByName('DEBUG_hulon_roads')[0]
+            if not roads_hulon:
+                raise Exception("did not find DEBUG_roads_hulon layer")
+                return
+            # 1. Generate sidewalk layer
             # create first buffer from street layers
-            processing.run("native:buffer", {'INPUT':'C:\\Users\\guymo\\Desktop\\roads_hulon.shp','DISTANCE':10,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
+
+            #buffer_1 = self._buffer(roads_hulon, ROADS_BUFFER_DISTANCE, "buffer_1")
+            buffer_1 = QgsProject.instance().mapLayersByName('DEBUG_buffer_1')[0]
+            if not buffer_1:
+                raise Exception("did not find DEBUG_buffer_1 layer")
+                return
 
             # create the second buffer from street layers
-            processing.run("native:buffer", {'INPUT':'C:\\Users\\guymo\\Desktop\\roads_hulon.shp','DISTANCE':7,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
+            # buffer_2 = self._buffer(roads_hulon, ROADS_BUFFER_DIFFRENCE, "buffer_2")
+            buffer_2 = QgsProject.instance().mapLayersByName('DEBUG_buffer_2')[0]
+            if not buffer_2:
+                raise Exception("did not find DEBUG_buffer_2 layer")
+                return
 
             # calc the diffrence between the layers
-            processing.run("native:difference", {'INPUT':'C:/Users/guymo/Desktop/10_buffer.shp','OVERLAY':'C:/Users/guymo/Desktop/7_buffer.shp','OUTPUT':'TEMPORARY_OUTPUT'})
+            # diffrence_layer = self._diffence(buffer_1, buffer_2, "diffrence")
+            diffrence_layer = QgsProject.instance().mapLayersByName('DEBUG_diffrence')[0]
+            if not diffrence_layer:
+                raise Exception("did not find DEBUG_diffrence layer")
+                return
 
             # saperate the sidewalks
-            processing.run("native:multiparttosingleparts", {'INPUT':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={0b7b12d3-36bb-4380-8744-c6fbeba3ce7b}','OUTPUT':'TEMPORARY_OUTPUT'})
+            # single_layer = self._saperate(diffrence_layer, "single")
+            single_layer = QgsProject.instance().mapLayersByName('DEBUG_single')[0]
+            if not single_layer:
+                raise Exception("did not find DEBUG_single layer")
+                return
 
             # TODO manually create filter layer of paths TODO!!!
 
-            # Create sidewalks of "paths"
-            processing.run("native:buffer", {'INPUT':'C:/Users/guymo/Desktop/roads_hulon.shp|subset="fclass" = \'path\'','DISTANCE':2,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
+            # # Create sidewalks of "paths"
+            # processing.run("native:buffer", {'INPUT':'C:/Users/guymo/Desktop/roads_hulon.shp|subset="fclass" = \'path\'','DISTANCE':2,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
 
-            # TODO create sidewalks of "foorways" (the same as path)
+            # # TODO create sidewalks of "footways" (the same as path)
 
-            # Combine the layers
-            processing.run("native:union", {'INPUT':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={d04dae53-b545-456b-8e44-f86a0aa98c38}','OVERLAY':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={0b7b12d3-36bb-4380-8744-c6fbeba3ce7b}','OVERLAY_FIELDS_PREFIX':'','OUTPUT':'TEMPORARY_OUTPUT'})
+            # # Combine the layers
+            # processing.run("native:union", {'INPUT':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={d04dae53-b545-456b-8e44-f86a0aa98c38}','OVERLAY':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={0b7b12d3-36bb-4380-8744-c6fbeba3ce7b}','OVERLAY_FIELDS_PREFIX':'','OUTPUT':'TEMPORARY_OUTPUT'})
 
             # 2. Create Fishnet
-            processing.run("native:creategrid", {'TYPE':2,'EXTENT':'34.754904527,34.814474993,31.991246985,32.039059885 [EPSG:4326]','HSPACING':1,'VSPACING':1,'HOVERLAY':0,'VOVERLAY':0,'CRS':QgsCoordinateReferenceSystem('EPSG:2039'),'OUTPUT':'TEMPORARY_OUTPUT'})
+            #sidewalks_grid = self._create_grid(single_layer, "sidewalks_grid")
+            sidewalks_grid = QgsProject.instance().mapLayersByName('DEBUG_sidewalks_grid')[0]
+            if not sidewalks_grid:
+                raise Exception("did not find DEBUG_single layer")
+                return
 
-            # TODO "Create Spatial Index" of the Grid layer!!!
+            
 
-            # 3. Intersect grid with total sidewalks
-            processing.run("native:selectbylocation", {'INPUT':'Polygon?crs=EPSG:2039&field=id:long(0,0)&field=left:double(0,0)&field=top:double(0,0)&field=right:double(0,0)&field=bottom:double(0,0)&uid={26b601be-5f90-4d39-ad07-a20fe696872c}','PREDICATE':[0],'INTERSECT':'C:\\Users\\guymo\\Desktop\\union.shp|layername=union','METHOD':0})
+            # # TODO "Create Spatial Index" of the Grid layer!!!
+
+            # # 3. Intersect grid with total sidewalks
+            # processing.run("native:selectbylocation", {'INPUT':'Polygon?crs=EPSG:2039&field=id:long(0,0)&field=left:double(0,0)&field=top:double(0,0)&field=right:double(0,0)&field=bottom:double(0,0)&uid={26b601be-5f90-4d39-ad07-a20fe696872c}','PREDICATE':[0],'INTERSECT':'C:\\Users\\guymo\\Desktop\\union.shp|layername=union','METHOD':0})
