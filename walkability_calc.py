@@ -33,8 +33,7 @@ from .walkability_calc_dialog import WalkabilityCalcDialog
 import os.path
 import processing
 from .config import *
-
-DEBUG = True
+from . import helpers
 
 class WalkabilityCalc:
     """QGIS Plugin Implementation."""
@@ -183,79 +182,6 @@ class WalkabilityCalc:
                 action)
             self.iface.removeToolBarIcon(action)
 
-    def _intersenct(self, input_layer, overlay_layer, layer_name):
-        result_layer = processing.run("native:intersection", {'INPUT':input_layer,'OVERLAY':overlay_layer,'INPUT_FIELDS':[],'OVERLAY_FIELDS':[],'OVERLAY_FIELDS_PREFIX':'','OUTPUT':'TEMPORARY_OUTPUT'})['OUTPUT']
-
-        #result_layer.setCrs(input_layer.crs())
-        result_layer.setCrs(overlay_layer.crs())
-
-        if DEBUG:
-                print(result_layer)
-                result_layer.setName("DEBUG_"+layer_name)
-                QgsProject.instance().addMapLayer(result_layer)
-        else:
-            result_layer.setName(layer_name)
-
-        return result_layer
-
-    def _buffer(self, input_layer, buffer_distance, layer_name):
-        result_layer = (processing.run("native:buffer", {'INPUT':input_layer,'DISTANCE':buffer_distance,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
-
-        if DEBUG:
-            print(result_layer)
-            result_layer.setName("DEBUG_"+layer_name)
-            QgsProject.instance().addMapLayer(result_layer)
-
-        else:
-            result_layer.setName(layer_name)
-
-        return result_layer
-    
-    def _diffence(self, layer_1, layer_2, layer_name):
-        result_layer = (processing.run("native:difference", {'INPUT': layer_1,'OVERLAY':layer_2,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
-
-        if DEBUG:
-            print(result_layer)
-            result_layer.setName("DEBUG_"+layer_name)
-            QgsProject.instance().addMapLayer(result_layer)
-
-        else:
-            result_layer.setName(layer_name)
-
-        return result_layer
-
-    def _saperate(self, layer, layer_name):
-        result_layer = (processing.run("native:multiparttosingleparts", {'INPUT':layer,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
-
-        if DEBUG:
-            print(result_layer)
-            result_layer.setName("DEBUG_" + layer_name)
-            QgsProject.instance().addMapLayer(result_layer)
-
-        else:
-            result_layer.setName(layer_name)
-
-        return result_layer
-
-    #filter layer:
-    #f = QgsFeatureRequest().setFilterExpression( '"fclass" = \'path\'' )
-
-    def _create_grid(self, input_layer, layer_name):
-        layer_extent = input_layer.extent()
-        extent_str = str(round(layer_extent.xMinimum(),4)) + "," + str(round(layer_extent.xMaximum(),4)) + "," + str(round(layer_extent.yMinimum(),4)) + "," + str(round(layer_extent.yMaximum(),4)) + " [" + input_layer.crs().authid() + "]"
-
-        result_layer = (processing.run("native:creategrid", {'TYPE':2,'EXTENT':'34.754904527,34.814474993,31.991246985,32.039059885 [EPSG:4326]','HSPACING':1,'VSPACING':1,'HOVERLAY':0,'VOVERLAY':0,'CRS':input_layer.crs(),'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
-
-        if DEBUG:
-            print(result_layer)
-            result_layer.setName("DEBUG_" + layer_name)
-            QgsProject.instance().addMapLayer(result_layer)
-
-        else:
-            result_layer.setName(layer_name)
-
-        return result_layer
-
     def _find_layer_by_name(self, layer_name):
         layers = QgsProject.instance().mapLayersByName(layer_name)
         if not layers:
@@ -264,6 +190,41 @@ class WalkabilityCalc:
             raise Exception("found more than 1 layer with name: " + layer_name + ". layers found: " + ", ".join(layers))
         else:
             return layers[0]
+
+    def create_sidewalks(self, roads_layer, border_layer):
+        # Intersenct beetwen the layers
+        roads_hulon = None
+        if DEBUG:
+            roads_hulon = self._find_layer_by_name("DEBUG_hulon_roads")
+        if not roads_hulon:
+            roads_hulon = helpers._intersenct(roads_layer, border_layer, "hulon_roads")
+
+        buffer_1 = None
+        if DEBUG:
+            buffer_1 = self._find_layer_by_name("DEBUG_buffer_1")
+        if not buffer_1:
+            buffer_1 = helpers._buffer(roads_hulon, ROADS_BUFFER_DISTANCE, "buffer_1")
+
+        # create the second buffer from street layers
+        buffer_2 = None
+        if DEBUG:
+            buffer_2 = self._find_layer_by_name("DEBUG_buffer_2")
+        if not buffer_2:
+            buffer_2 = helpers._buffer(roads_hulon, ROADS_BUFFER_DIFFRENCE, "buffer_2")
+
+        # calc the diffrence between the layers
+        diffrence_layer = None
+        if DEBUG:
+            diffrence_layer = self._find_layer_by_name("DEBUG_diffrence")
+        if not diffrence_layer:
+            diffrence_layer = helpers._diffence(buffer_1, buffer_2, "diffrence")
+
+        # saperate the sidewalks
+        single_layer = None
+        if DEBUG:
+            single_layer = self._find_layer_by_name("DEBUG_single")
+        if not single_layer:
+            single_layer = helpers._saperate(diffrence_layer, "single")
 
     def run(self):
         """Run method that performs all the real work"""
@@ -276,10 +237,9 @@ class WalkabilityCalc:
 
             # TODO!!! use CRS from user input 
             print("start first use")
-            #self.dlg.comboBoxStreetLayer.setFilters(QgsMapLayerProxyModel.LineLayer)
-            #self.dlg.comboBoxShadeLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-            self.dlg.comboBoxGvulLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-            self.dlg.comboBoxOsmRoadsLayer.setFilters(QgsMapLayerProxyModel.LineLayer)
+            self.dlg.comboBoxRoadsLayer.setFilters(QgsMapLayerProxyModel.LineLayer)
+            self.dlg.comboBoxBorderLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+            self.dlg.comboBoxShadedLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
             print("end first use")
 
         # show the dialog
@@ -290,44 +250,20 @@ class WalkabilityCalc:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            gvul_layer = self.dlg.comboBoxGvulLayer.currentLayer()
-            roads_layer = self.dlg.comboBoxOsmRoadsLayer.currentLayer()
-            print(gvul_layer.name())
-            print(roads_layer.name())
+            roads_layer = self.dlg.comboBoxRoadsLayer.currentLayer()
+            border_layer = self.dlg.comboBoxBorderLayer.currentLayer()
+            shaded_layer = self.dlg.comboBoxShadedLayer.currentLayer()
+            
+            print(roads_layer)
+            print(border_layer)
+            print(shaded_layer)
 
-            # Intersenct beetwen the layers
-            roads_hulon = None
-            if DEBUG:
-                roads_hulon = self._find_layer_by_name("DEBUG_hulon_roads")
-            if not roads_hulon:
-                roads_hulon = self._intersenct(roads_layer, gvul_layer, "hulon_roads")
+            sidewalks_layer = self.create_sidewalks(roads_layer, border_layer)
+            
+            #sidewalks_raster = helpers._vector_to_raster(sidewalks_layer)
 
-            buffer_1 = None
-            if DEBUG:
-                buffer_1 = self._find_layer_by_name("DEBUG_buffer_1")
-            if not buffer_1:
-                buffer_1 = self._buffer(roads_hulon, ROADS_BUFFER_DISTANCE, "buffer_1")
+            print("finish plugin run")
 
-            # create the second buffer from street layers
-            buffer_2 = None
-            if DEBUG:
-                buffer_2 = self._find_layer_by_name("DEBUG_buffer_2")
-            if not buffer_2:
-                buffer_2 = self._buffer(roads_hulon, ROADS_BUFFER_DIFFRENCE, "buffer_2")
-
-            # calc the diffrence between the layers
-            diffrence_layer = None
-            if DEBUG:
-                diffrence_layer = self._find_layer_by_name("DEBUG_diffrence")
-            if not diffrence_layer:
-                diffrence_layer = self._diffence(buffer_1, buffer_2, "diffrence")
-
-            # saperate the sidewalks
-            single_layer = None
-            if DEBUG:
-                single_layer = self._find_layer_by_name("DEBUG_single")
-            if not single_layer:
-                single_layer = self._saperate(diffrence_layer, "single")
 
             # TODO manually create filter layer of paths TODO!!!
 
