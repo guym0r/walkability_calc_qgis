@@ -256,6 +256,15 @@ class WalkabilityCalc:
 
         return result_layer
 
+    def _find_layer_by_name(self, layer_name):
+        layers = QgsProject.instance().mapLayersByName(layer_name)
+        if not layers:
+            return None
+        elif len(layers) > 1:
+            raise Exception("found more than 1 layer with name: " + layer_name + ". layers found: " + ", ".join(layers))
+        else:
+            return layers[0]
+
     def run(self):
         """Run method that performs all the real work"""
 
@@ -286,41 +295,39 @@ class WalkabilityCalc:
             print(gvul_layer.name())
             print(roads_layer.name())
 
-            # 0. Intersenct beetwen the layers
-            #roads_hulon = self._intersenct(roads_layer, gvul_layer, "hulon_roads")
-            roads_hulon = QgsProject.instance().mapLayersByName('DEBUG_hulon_roads')[0]
+            # Intersenct beetwen the layers
+            roads_hulon = None
+            if DEBUG:
+                roads_hulon = self._find_layer_by_name("DEBUG_hulon_roads")
             if not roads_hulon:
-                raise Exception("did not find DEBUG_roads_hulon layer")
-                return
-            # 1. Generate sidewalk layer
-            # create first buffer from street layers
+                roads_hulon = self._intersenct(roads_layer, gvul_layer, "hulon_roads")
 
-            #buffer_1 = self._buffer(roads_hulon, ROADS_BUFFER_DISTANCE, "buffer_1")
-            buffer_1 = QgsProject.instance().mapLayersByName('DEBUG_buffer_1')[0]
+            buffer_1 = None
+            if DEBUG:
+                buffer_1 = self._find_layer_by_name("DEBUG_buffer_1")
             if not buffer_1:
-                raise Exception("did not find DEBUG_buffer_1 layer")
-                return
+                buffer_1 = self._buffer(roads_hulon, ROADS_BUFFER_DISTANCE, "buffer_1")
 
             # create the second buffer from street layers
-            # buffer_2 = self._buffer(roads_hulon, ROADS_BUFFER_DIFFRENCE, "buffer_2")
-            buffer_2 = QgsProject.instance().mapLayersByName('DEBUG_buffer_2')[0]
+            buffer_2 = None
+            if DEBUG:
+                buffer_2 = self._find_layer_by_name("DEBUG_buffer_2")
             if not buffer_2:
-                raise Exception("did not find DEBUG_buffer_2 layer")
-                return
+                buffer_2 = self._buffer(roads_hulon, ROADS_BUFFER_DIFFRENCE, "buffer_2")
 
             # calc the diffrence between the layers
-            # diffrence_layer = self._diffence(buffer_1, buffer_2, "diffrence")
-            diffrence_layer = QgsProject.instance().mapLayersByName('DEBUG_diffrence')[0]
+            diffrence_layer = None
+            if DEBUG:
+                diffrence_layer = self._find_layer_by_name("DEBUG_diffrence")
             if not diffrence_layer:
-                raise Exception("did not find DEBUG_diffrence layer")
-                return
+                diffrence_layer = self._diffence(buffer_1, buffer_2, "diffrence")
 
             # saperate the sidewalks
-            # single_layer = self._saperate(diffrence_layer, "single")
-            single_layer = QgsProject.instance().mapLayersByName('DEBUG_single')[0]
+            single_layer = None
+            if DEBUG:
+                single_layer = self._find_layer_by_name("DEBUG_single")
             if not single_layer:
-                raise Exception("did not find DEBUG_single layer")
-                return
+                single_layer = self._saperate(diffrence_layer, "single")
 
             # TODO manually create filter layer of paths TODO!!!
 
@@ -334,10 +341,10 @@ class WalkabilityCalc:
 
             # 2. Create Fishnet
             #sidewalks_grid = self._create_grid(single_layer, "sidewalks_grid")
-            sidewalks_grid = QgsProject.instance().mapLayersByName('DEBUG_sidewalks_grid')[0]
-            if not sidewalks_grid:
-                raise Exception("did not find DEBUG_single layer")
-                return
+            # sidewalks_grid = QgsProject.instance().mapLayersByName('DEBUG_sidewalks_grid')[0]
+            # if not sidewalks_grid:
+            #     raise Exception("did not find DEBUG_single layer")
+            #     return
 
             
 
