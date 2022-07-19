@@ -61,6 +61,19 @@ def _saperate(layer, layer_name):
 #filter layer:
 #f = QgsFeatureRequest().setFilterExpression( '"fclass" = \'path\'' )
 
+def _create_heatmap(input_layer, radius, layer_name): # TODO want raw or scaled
+    result_layer = (processing.run("qgis:heatmapkerneldensityestimation", {'INPUT':input_layer,'RADIUS':radius,'RADIUS_FIELD':'','PIXEL_SIZE':1,'WEIGHT_FIELD':'','KERNEL':0,'DECAY':0,'OUTPUT_VALUE':0,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+    if DEBUG:
+        print(result_layer)
+        result_layer.setName("DEBUG_" + layer_name)
+        QgsProject.instance().addMapLayer(result_layer)
+
+    else:
+        result_layer.setName(layer_name)
+
+    return result_layer
+
 def get_layer_extent_str(input_layer):
     layer_extent_str = str(round(input_layer.extent().xMinimum(), EXTENT_ACCUARY)) + "," + str(round(input_layer.extent().xMaximum(), EXTENT_ACCUARY)) + "," + str(round(input_layer.extent().yMinimum(), EXTENT_ACCUARY)) + "," + str(round(input_layer.extent().yMaximum(), EXTENT_ACCUARY)) + " [" + input_layer.crs().authid() + "]"
 

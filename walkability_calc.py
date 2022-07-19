@@ -226,6 +226,15 @@ class WalkabilityCalc:
         if not single_layer:
             single_layer = helpers._saperate(diffrence_layer, "single")
 
+    def create_demand_layer(public_inst_layer):
+        demand_1 = None
+        if DEBUG:
+            demand_1 = self._find_layer_by_name("DEBUG_demand_1")
+        if not demand_1:
+            demand_1 = helpers._create_heatmap(diffrence_layer, HEATMAP_RADIUS_SIZE, "demand_1")
+
+        return demand_1
+
     def run(self):
         """Run method that performs all the real work"""
 
@@ -262,6 +271,8 @@ class WalkabilityCalc:
             
             #sidewalks_raster = helpers._vector_to_raster(sidewalks_layer)
 
+            #demand_layer = self.create_demand_layer()
+            
             print("finish plugin run")
 
 
