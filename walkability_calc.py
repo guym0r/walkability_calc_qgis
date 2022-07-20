@@ -191,13 +191,14 @@ class WalkabilityCalc:
         else:
             return layers[0]
 
-    def create_sidewalks(self, roads_layer, border_layer):
+    # TODO create sidewalks from roads type of paths and footway and combine all together
+    def create_sidewalks_layer(self):
         # Intersenct beetwen the layers
         roads_hulon = None
         if DEBUG:
             roads_hulon = self._find_layer_by_name("DEBUG_hulon_roads")
         if not roads_hulon:
-            roads_hulon = helpers._intersenct(roads_layer, border_layer, "hulon_roads")
+            roads_hulon = helpers._intersenct(self.roads_layer, self.border_layer, "hulon_roads")
 
         buffer_1 = None
         if DEBUG:
@@ -226,14 +227,37 @@ class WalkabilityCalc:
         if not single_layer:
             single_layer = helpers._saperate(diffrence_layer, "single")
 
-    def create_demand_layer(public_inst_layer):
+        sidewalks_raster = None
+        if DEBUG:
+            sidewalks_raster = self._find_layer_by_name("DEBUG_sidewalks_raster")
+        if not sidewalks_raster:
+            sidewalks_raster = helpers._vector_to_raster(single_layer, SIDEWALK_RASTERIZE_BURN, self.border_layer, "sidewalks_raster")
+
+        return single_layer, sidewalks_raster
+
+    def create_demand_layer(self):
         demand_1 = None
         if DEBUG:
             demand_1 = self._find_layer_by_name("DEBUG_demand_1")
         if not demand_1:
-            demand_1 = helpers._create_heatmap(diffrence_layer, HEATMAP_RADIUS_SIZE, "demand_1")
+            demand_1 = helpers._create_heatmap(self.public_inst_layer, HEATMAP_RADIUS_SIZE, "demand_1")
 
         return demand_1
+
+    def create_shaded_area(self):
+        buffered_shaded_layer = None
+        if DEBUG:
+            buffered_shaded_layer = self._find_layer_by_name("DEBUG_buffer_shades")
+        if not buffered_shaded_layer:
+            buffered_shaded_layer = helpers._buffer(self.shaded_layer, TREE_BUFFER, "buffer_shades")
+
+        buffered_shaded_raster_layer = None
+        if DEBUG:
+            buffered_shaded_raster_layer = self._find_layer_by_name("DEBUG_raster_shaded")
+        if not buffered_shaded_raster_layer:
+            buffered_shaded_raster_layer = helpers._vector_to_raster(buffered_shaded_layer, SHADES_RASTERIZE_BURN, self.border_layer, "raster_shaded")
+
+        return buffered_shaded_layer, buffered_shaded_raster_layer
 
     def run(self):
         """Run method that performs all the real work"""
@@ -244,12 +268,11 @@ class WalkabilityCalc:
             self.first_start = False
             self.dlg = WalkabilityCalcDialog()
 
-            # TODO!!! use CRS from user input 
-            print("start first use")
             self.dlg.comboBoxRoadsLayer.setFilters(QgsMapLayerProxyModel.LineLayer)
             self.dlg.comboBoxBorderLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
             self.dlg.comboBoxShadedLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
-            print("end first use")
+            self.dlg.comboBoxInstituteLayer.setFilters(QgsMapLayerProxyModel.PointLayer)
+            # TODO!!! use CRS from user input
 
         # show the dialog
         self.dlg.show()
@@ -259,40 +282,19 @@ class WalkabilityCalc:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            roads_layer = self.dlg.comboBoxRoadsLayer.currentLayer()
-            border_layer = self.dlg.comboBoxBorderLayer.currentLayer()
-            shaded_layer = self.dlg.comboBoxShadedLayer.currentLayer()
-            
-            print(roads_layer)
-            print(border_layer)
-            print(shaded_layer)
+            self.roads_layer = self.dlg.comboBoxRoadsLayer.currentLayer()
+            self.border_layer = self.dlg.comboBoxBorderLayer.currentLayer()
+            self.shaded_layer = self.dlg.comboBoxShadedLayer.currentLayer()
+            self.public_inst_layer = self.dlg.comboBoxInstituteLayer.currentLayer()
 
-            sidewalks_layer = self.create_sidewalks(roads_layer, border_layer)
-            
-            #sidewalks_raster = helpers._vector_to_raster(sidewalks_layer)
+
+            sidewalks_vector_layer, sidewalks_raster_layer = self.create_sidewalks_layer()
 
             #demand_layer = self.create_demand_layer()
             
+            buffered_shaded_vector_layer, buffered_shaded_raster_layer = self.create_shaded_area()
+
             print("finish plugin run")
-
-
-            # TODO manually create filter layer of paths TODO!!!
-
-            # # Create sidewalks of "paths"
-            # processing.run("native:buffer", {'INPUT':'C:/Users/guymo/Desktop/roads_hulon.shp|subset="fclass" = \'path\'','DISTANCE':2,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'})
-
-            # # TODO create sidewalks of "footways" (the same as path)
-
-            # # Combine the layers
-            # processing.run("native:union", {'INPUT':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={d04dae53-b545-456b-8e44-f86a0aa98c38}','OVERLAY':'memory://MultiPolygon?crs=EPSG:2039&field=osm_id:string(10,0)&field=code:integer(4,0)&field=fclass:string(28,0)&field=name:string(100,0)&field=ref:string(20,0)&field=oneway:string(1,0)&field=maxspeed:integer(3,0)&field=layer:long(12,0)&field=bridge:string(1,0)&field=tunnel:string(1,0)&field=id:long(10,0)&uid={0b7b12d3-36bb-4380-8744-c6fbeba3ce7b}','OVERLAY_FIELDS_PREFIX':'','OUTPUT':'TEMPORARY_OUTPUT'})
-
-            # 2. Create Fishnet
-            #sidewalks_grid = self._create_grid(single_layer, "sidewalks_grid")
-            # sidewalks_grid = QgsProject.instance().mapLayersByName('DEBUG_sidewalks_grid')[0]
-            # if not sidewalks_grid:
-            #     raise Exception("did not find DEBUG_single layer")
-            #     return
-
             
 
             # # TODO "Create Spatial Index" of the Grid layer!!!

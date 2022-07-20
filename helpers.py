@@ -1,4 +1,4 @@
-from qgis.core import QgsMapLayerProxyModel, Qgis, QgsProject
+from qgis.core import QgsMapLayerProxyModel, Qgis, QgsProject, QgsRasterLayer
 import processing
 import math
 
@@ -61,16 +61,15 @@ def _saperate(layer, layer_name):
 #filter layer:
 #f = QgsFeatureRequest().setFilterExpression( '"fclass" = \'path\'' )
 
-def _create_heatmap(input_layer, radius, layer_name): # TODO want raw or scaled
-    result_layer = (processing.run("qgis:heatmapkerneldensityestimation", {'INPUT':input_layer,'RADIUS':radius,'RADIUS_FIELD':'','PIXEL_SIZE':1,'WEIGHT_FIELD':'','KERNEL':0,'DECAY':0,'OUTPUT_VALUE':0,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+def _create_heatmap(input_layer, radius, layer_name): # TODO want raw or scaled?
+    result_layer_path = (processing.run("qgis:heatmapkerneldensityestimation", {'INPUT':input_layer,'RADIUS':radius,'RADIUS_FIELD':'','PIXEL_SIZE':1,'WEIGHT_FIELD':'','KERNEL':0,'DECAY':0,'OUTPUT_VALUE':0,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+    result_layer = QgsRasterLayer(result_layer_path, layer_name)
 
     if DEBUG:
         print(result_layer)
         result_layer.setName("DEBUG_" + layer_name)
         QgsProject.instance().addMapLayer(result_layer)
-
-    else:
-        result_layer.setName(layer_name)
 
     return result_layer
 
@@ -82,6 +81,14 @@ def get_layer_extent_str(input_layer):
 
     return layer_extent_str
 
-def _vector_to_raster(input_layer, burn_value, extent_layer):
-    return
-    #processing.run("gdal:rasterize", {'INPUT':input_layer,'FIELD':'','BURN':burn_value,'USE_Z':False,'UNITS':1,'WIDTH':1,'HEIGHT':1,'EXTENT':get_layer_extent_str(extent_layer),'NODATA':0,'OPTIONS':'','DATA_TYPE':5,'INIT':None,'INVERT':False,'EXTRA':'','OUTPUT':'TEMPORARY_OUTPUT'})
+def _vector_to_raster(input_layer, burn_value, extent_layer, layer_name):
+    result_layer_path = (processing.run("gdal:rasterize", {'INPUT':input_layer,'FIELD':'','BURN':burn_value,'USE_Z':False,'UNITS':1,'WIDTH':1,'HEIGHT':1,'EXTENT':get_layer_extent_str(extent_layer),'NODATA':0,'OPTIONS':'','DATA_TYPE':5,'INIT':None,'INVERT':False,'EXTRA':'','OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+    result_layer = QgsRasterLayer(result_layer_path, layer_name)
+
+    if DEBUG:
+        print(result_layer)
+        result_layer.setName("DEBUG_" + layer_name)
+        QgsProject.instance().addMapLayer(result_layer)
+
+    return result_layer

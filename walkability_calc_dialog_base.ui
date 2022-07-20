@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>444</width>
-    <height>265</height>
+    <width>454</width>
+    <height>425</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -40,7 +40,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>230</y>
+     <y>380</y>
      <width>193</width>
      <height>28</height>
     </rect>
@@ -93,6 +93,29 @@
      <width>201</width>
      <height>27</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QgsMapLayerComboBox" name="comboBoxInstituteLayer">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>260</y>
+     <width>201</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>240</y>
+     <width>201</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Institute Layer</string>
    </property>
   </widget>
  </widget>
