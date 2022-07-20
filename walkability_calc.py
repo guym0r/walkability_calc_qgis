@@ -221,19 +221,19 @@ class WalkabilityCalc:
             diffrence_layer = helpers._diffence(buffer_1, buffer_2, "diffrence")
 
         # saperate the sidewalks
-        single_layer = None
+        sidewalks_vector = None
         if DEBUG:
-            single_layer = self._find_layer_by_name("DEBUG_single")
-        if not single_layer:
-            single_layer = helpers._saperate(diffrence_layer, "single")
+            sidewalks_vector = self._find_layer_by_name("DEBUG_sidewalks_vector")
+        if not sidewalks_vector:
+            sidewalks_vector = helpers._saperate(diffrence_layer, "sidewalks_vector")
 
         sidewalks_raster = None
         if DEBUG:
             sidewalks_raster = self._find_layer_by_name("DEBUG_sidewalks_raster")
         if not sidewalks_raster:
-            sidewalks_raster = helpers._vector_to_raster(single_layer, SIDEWALK_RASTERIZE_BURN, self.border_layer, "sidewalks_raster")
+            sidewalks_raster = helpers._vector_to_raster(sidewalks_vector, SIDEWALK_RASTERIZE_BURN, self.border_layer, "sidewalks_raster")
 
-        return single_layer, sidewalks_raster
+        return sidewalks_vector, sidewalks_raster
 
     def create_demand_layer(self):
         demand_1 = None
