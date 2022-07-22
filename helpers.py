@@ -1,74 +1,74 @@
-from qgis.core import QgsMapLayerProxyModel, Qgis, QgsProject, QgsRasterLayer
+from qgis.core import QgsMapLayerProxyModel, Qgis, QgsProject, QgsRasterLayer, QgsExpressionContext, QgsExpressionContextUtils, QgsField
 import processing
 import math
 
 from .config import *
 
-def _intersenct(input_layer, overlay_layer, layer_name):
+def _intersenct(output_layer_name, input_layer, overlay_layer):
     result_layer = processing.run("native:intersection", {'INPUT':input_layer,'OVERLAY':overlay_layer,'INPUT_FIELDS':[],'OVERLAY_FIELDS':[],'OVERLAY_FIELDS_PREFIX':'','OUTPUT':'TEMPORARY_OUTPUT'})['OUTPUT']
 
     #result_layer.setCrs(input_layer.crs())
-    result_layer.setCrs(overlay_layer.crs())
+    result_layer.setCrs(overlay_layer.crs()) # TODO remove
 
     if DEBUG:
             print(result_layer)
-            result_layer.setName("DEBUG_"+layer_name)
+            result_layer.setName(DEBUG_LAYER_PREFIX + output_layer_name)
             QgsProject.instance().addMapLayer(result_layer)
     else:
-        result_layer.setName(layer_name)
+        result_layer.setName(output_layer_name)
 
     return result_layer
 
-def _buffer(input_layer, buffer_distance, layer_name):
+def _buffer(output_layer_name, input_layer, buffer_distance):
     result_layer = (processing.run("native:buffer", {'INPUT':input_layer,'DISTANCE':buffer_distance,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
 
     if DEBUG:
         print(result_layer)
-        result_layer.setName("DEBUG_"+layer_name)
+        result_layer.setName(DEBUG_LAYER_PREFIX + output_layer_name)
         QgsProject.instance().addMapLayer(result_layer)
 
     else:
-        result_layer.setName(layer_name)
+        result_layer.setName(output_layer_name)
 
     return result_layer
 
-def _diffence(layer_1, layer_2, layer_name):
+def _diffence(output_layer_name, layer_1, layer_2):
     result_layer = (processing.run("native:difference", {'INPUT': layer_1,'OVERLAY':layer_2,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
 
     if DEBUG:
         print(result_layer)
-        result_layer.setName("DEBUG_"+layer_name)
+        result_layer.setName(DEBUG_LAYER_PREFIX + output_layer_name)
         QgsProject.instance().addMapLayer(result_layer)
 
     else:
-        result_layer.setName(layer_name)
+        result_layer.setName(output_layer_name)
 
     return result_layer
 
-def _saperate(layer, layer_name):
+def _saperate(output_layer_name, layer):
     result_layer = (processing.run("native:multiparttosingleparts", {'INPUT':layer,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
 
     if DEBUG:
         print(result_layer)
-        result_layer.setName("DEBUG_" + layer_name)
+        result_layer.setName(DEBUG_LAYER_PREFIX + output_layer_name)
         QgsProject.instance().addMapLayer(result_layer)
 
     else:
-        result_layer.setName(layer_name)
+        result_layer.setName(output_layer_name)
 
     return result_layer
 
 #filter layer:
 #f = QgsFeatureRequest().setFilterExpression( '"fclass" = \'path\'' )
 
-def _create_heatmap(input_layer, radius, layer_name): # TODO want raw or scaled?
+def _create_heatmap(output_layer_name, input_layer, radius): # TODO want raw or scaled?
     result_layer_path = (processing.run("qgis:heatmapkerneldensityestimation", {'INPUT':input_layer,'RADIUS':radius,'RADIUS_FIELD':'','PIXEL_SIZE':1,'WEIGHT_FIELD':'','KERNEL':0,'DECAY':0,'OUTPUT_VALUE':0,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
 
-    result_layer = QgsRasterLayer(result_layer_path, layer_name)
+    result_layer = QgsRasterLayer(result_layer_path, output_layer_name)
 
     if DEBUG:
         print(result_layer)
-        result_layer.setName("DEBUG_" + layer_name)
+        result_layer.setName(DEBUG_LAYER_PREFIX + output_layer_name)
         QgsProject.instance().addMapLayer(result_layer)
 
     return result_layer
@@ -81,14 +81,46 @@ def get_layer_extent_str(input_layer):
 
     return layer_extent_str
 
-def _vector_to_raster(input_layer, burn_value, extent_layer, layer_name):
+def _vector_to_raster(output_layer_name, input_layer, burn_value, extent_layer):
     result_layer_path = (processing.run("gdal:rasterize", {'INPUT':input_layer,'FIELD':'','BURN':burn_value,'USE_Z':False,'UNITS':1,'WIDTH':1,'HEIGHT':1,'EXTENT':get_layer_extent_str(extent_layer),'NODATA':0,'OPTIONS':'','DATA_TYPE':5,'INIT':None,'INVERT':False,'EXTRA':'','OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
 
-    result_layer = QgsRasterLayer(result_layer_path, layer_name)
+    result_layer = QgsRasterLayer(result_layer_path, output_layer_name)
 
     if DEBUG:
         print(result_layer)
-        result_layer.setName("DEBUG_" + layer_name)
+        result_layer.setName(DEBUG_LAYER_PREFIX + output_layer_name)
         QgsProject.instance().addMapLayer(result_layer)
 
     return result_layer
+
+def _zonal_statistics(output_layer_name, vector_layer, raster_layer, attribute_prefix, stats):
+    result_layer = (processing.run("native:zonalstatisticsfb", {'INPUT':vector_layer,'INPUT_RASTER':raster_layer,'RASTER_BAND':1,'COLUMN_PREFIX':attribute_prefix,'STATISTICS':stats,'OUTPUT':'TEMPORARY_OUTPUT'}))['OUTPUT']
+
+    if DEBUG:
+        print(result_layer)
+        result_layer.setName(DEBUG_LAYER_PREFIX + output_layer_name)
+        QgsProject.instance().addMapLayer(result_layer)
+
+    return result_layer
+
+def _add_field_by_expression(input_layer, new_attr_name, new_attr_type, expression):
+    counter = 0
+
+    input_layer.startEditing()
+    data_provider = input_layer.dataProvider()
+    data_provider.addAttributes([QgsField(new_attr_name, new_attr_type)])
+    input_layer.updateFields()
+    
+    context = QgsExpressionContext() # TODO check if need context
+    context.appendScopes(QgsExpressionContextUtils.globalProjectLayerScopes(input_layer))
+    for f in input_layer.getFeatures():
+        context.setFeature(f)
+        temp = expression.evaluate(context)
+        if counter % 30 == 0:
+            print(temp)
+        f[new_attr_name] = temp
+        input_layer.updateFeature(f)
+        counter+= 1
+
+    input_layer.commitChanges()
+    print(input_layer.name())

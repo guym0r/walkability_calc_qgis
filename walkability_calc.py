@@ -24,7 +24,8 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.core import QgsMapLayerProxyModel, Qgis, QgsProject
+from qgis.core import QgsMapLayerProxyModel, Qgis, QgsProject, QgsExpression
+from PyQt5.QtCore import QVariant
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -183,6 +184,12 @@ class WalkabilityCalc:
             self.iface.removeToolBarIcon(action)
 
     def _find_layer_by_name(self, layer_name):
+        if DEBUG:
+            debug_layers = QgsProject.instance().mapLayersByName(DEBUG_LAYER_PREFIX + layer_name)
+            if len(debug_layers) == 1:
+                print("return :" + debug_layers[0].name())
+                return debug_layers[0]        
+
         layers = QgsProject.instance().mapLayersByName(layer_name)
         if not layers:
             return None
@@ -191,73 +198,44 @@ class WalkabilityCalc:
         else:
             return layers[0]
 
+    def create_layer_from_function(self, process_function, output_layer_name, *args):
+        result_layer = None
+        if DEBUG:
+            result_layer = self._find_layer_by_name(output_layer_name)
+        if not result_layer:
+            result_layer = process_function(output_layer_name, *args)
+
+        return result_layer
+
     # TODO create sidewalks from roads type of paths and footway and combine all together
     def create_sidewalks_layer(self):
-        # Intersenct beetwen the layers
-        roads_hulon = None
-        if DEBUG:
-            roads_hulon = self._find_layer_by_name("DEBUG_hulon_roads")
-        if not roads_hulon:
-            roads_hulon = helpers._intersenct(self.roads_layer, self.border_layer, "hulon_roads")
-
-        buffer_1 = None
-        if DEBUG:
-            buffer_1 = self._find_layer_by_name("DEBUG_buffer_1")
-        if not buffer_1:
-            buffer_1 = helpers._buffer(roads_hulon, ROADS_BUFFER_DISTANCE, "buffer_1")
-
-        # create the second buffer from street layers
-        buffer_2 = None
-        if DEBUG:
-            buffer_2 = self._find_layer_by_name("DEBUG_buffer_2")
-        if not buffer_2:
-            buffer_2 = helpers._buffer(roads_hulon, ROADS_BUFFER_DIFFRENCE, "buffer_2")
-
-        # calc the diffrence between the layers
-        diffrence_layer = None
-        if DEBUG:
-            diffrence_layer = self._find_layer_by_name("DEBUG_diffrence")
-        if not diffrence_layer:
-            diffrence_layer = helpers._diffence(buffer_1, buffer_2, "diffrence")
-
-        # saperate the sidewalks
-        sidewalks_vector = None
-        if DEBUG:
-            sidewalks_vector = self._find_layer_by_name("DEBUG_sidewalks_vector")
-        if not sidewalks_vector:
-            sidewalks_vector = helpers._saperate(diffrence_layer, "sidewalks_vector")
-
-        sidewalks_raster = None
-        if DEBUG:
-            sidewalks_raster = self._find_layer_by_name("DEBUG_sidewalks_raster")
-        if not sidewalks_raster:
-            sidewalks_raster = helpers._vector_to_raster(sidewalks_vector, SIDEWALK_RASTERIZE_BURN, self.border_layer, "sidewalks_raster")
-
+        roads_hulon = self.create_layer_from_function(helpers._intersenct, "hulon_roads", self.roads_layer, self.border_layer)
+        buffer_1 = self.create_layer_from_function(helpers._buffer, "buffer_1", roads_hulon, ROADS_BUFFER_DISTANCE)
+        buffer_2 = self.create_layer_from_function(helpers._buffer, "buffer_2", roads_hulon, ROADS_BUFFER_DIFFRENCE)
+        diffrence_layer = self.create_layer_from_function(helpers._diffence, "diffrence", buffer_1, buffer_2)
+        sidewalks_vector = self.create_layer_from_function(helpers._saperate, "sidewalks_vector", diffrence_layer)
+        sidewalks_raster = self.create_layer_from_function(helpers._vector_to_raster, "sidewalks_raster", sidewalks_vector, SIDEWALK_RASTERIZE_BURN, self.border_layer)
         return sidewalks_vector, sidewalks_raster
 
-    def create_demand_layer(self):
-        demand_1 = None
-        if DEBUG:
-            demand_1 = self._find_layer_by_name("DEBUG_demand_1")
-        if not demand_1:
-            demand_1 = helpers._create_heatmap(self.public_inst_layer, HEATMAP_RADIUS_SIZE, "demand_1")
-
+    def create_demand_layer(self, input_layer):
+        demand_1 = self.create_layer_from_function(helpers._create_heatmap, "heatmap_" + input_layer.name(), input_layer, HEATMAP_RADIUS_SIZE)
         return demand_1
 
     def create_shaded_area(self):
-        buffered_shaded_layer = None
-        if DEBUG:
-            buffered_shaded_layer = self._find_layer_by_name("DEBUG_buffer_shades")
-        if not buffered_shaded_layer:
-            buffered_shaded_layer = helpers._buffer(self.shaded_layer, TREE_BUFFER, "buffer_shades")
-
-        buffered_shaded_raster_layer = None
-        if DEBUG:
-            buffered_shaded_raster_layer = self._find_layer_by_name("DEBUG_raster_shaded")
-        if not buffered_shaded_raster_layer:
-            buffered_shaded_raster_layer = helpers._vector_to_raster(buffered_shaded_layer, SHADES_RASTERIZE_BURN, self.border_layer, "raster_shaded")
+        buffered_shaded_layer = self.create_layer_from_function(helpers._buffer, "buffer_shades", self.shaded_layer, TREE_BUFFER)
+        buffered_shaded_raster_layer = self.create_layer_from_function(helpers._vector_to_raster, "raster_shaded", buffered_shaded_layer, SHADES_RASTERIZE_BURN, self.border_layer)
 
         return buffered_shaded_layer, buffered_shaded_raster_layer
+
+    def alg1(self, sidewalks_vector_layer, transport_demand_layer, instetute_demand_layer, shade_sidewalks_raster):
+        zs_tr = self.create_layer_from_function(helpers._zonal_statistics, "zs_tr", sidewalks_vector_layer, transport_demand_layer, "tr_", [ZS_MEAN])
+
+        zs_tr_poi = self.create_layer_from_function(helpers._zonal_statistics, "zs_tr_poi", zs_tr, instetute_demand_layer, "poi_", [ZS_MEAN])
+
+        zs_tr_poi_shade = self.create_layer_from_function(helpers._zonal_statistics, "zs_tr_poi_shade", zs_tr_poi, shade_sidewalks_raster, "shade_", [ZS_SUM])
+
+        #helpers._add_field_by_expression(zs_tr_poi_shade, "walk_1", QVariant.Double, QgsExpression(WALK_CALC_EXPRESSION))
+
 
     def run(self):
         """Run method that performs all the real work"""
@@ -272,6 +250,7 @@ class WalkabilityCalc:
             self.dlg.comboBoxBorderLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
             self.dlg.comboBoxShadedLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
             self.dlg.comboBoxInstituteLayer.setFilters(QgsMapLayerProxyModel.PointLayer)
+            self.dlg.comboBoxTransportLayer.setFilters(QgsMapLayerProxyModel.PointLayer)
             # TODO!!! use CRS from user input
 
         # show the dialog
@@ -286,13 +265,22 @@ class WalkabilityCalc:
             self.border_layer = self.dlg.comboBoxBorderLayer.currentLayer()
             self.shaded_layer = self.dlg.comboBoxShadedLayer.currentLayer()
             self.public_inst_layer = self.dlg.comboBoxInstituteLayer.currentLayer()
+            self.transport_layer = self.dlg.comboBoxTransportLayer.currentLayer()
 
 
             sidewalks_vector_layer, sidewalks_raster_layer = self.create_sidewalks_layer()
-
-            #demand_layer = self.create_demand_layer()
-            
             buffered_shaded_vector_layer, buffered_shaded_raster_layer = self.create_shaded_area()
+
+            instetute_demand_layer = self.create_demand_layer(self.public_inst_layer)
+            transport_demand_layer = self.create_demand_layer(self.transport_layer)
+
+            # find a place for it!
+            shaded_sidewalks_vector = self.create_layer_from_function(helpers._intersenct, "shaded_sidewalks_vector", sidewalks_vector_layer, buffered_shaded_vector_layer)
+
+            shaded_sidewalks_raster = self.create_layer_from_function(helpers._vector_to_raster, "shaded_sidewalks_raster", shaded_sidewalks_vector, SHADES_SIDEWALKS_RASTERIZE_BURN, self.border_layer)
+
+            self.alg1(sidewalks_vector_layer, transport_demand_layer, instetute_demand_layer, shaded_sidewalks_raster)
+
 
             print("finish plugin run")
             
