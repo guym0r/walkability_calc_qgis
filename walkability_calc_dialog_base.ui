@@ -6,41 +6,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>441</width>
-    <height>505</height>
+    <width>586</width>
+    <height>539</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Walkability calculator</string>
   </property>
-  <widget class="QgsMapLayerComboBox" name="comboBoxRoadsLayer">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>50</y>
-     <width>201</width>
-     <height>27</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>30</y>
-     <width>201</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Roads Layer</string>
-   </property>
-  </widget>
   <widget class="QDialogButtonBox" name="button_box">
    <property name="geometry">
     <rect>
-     <x>240</x>
-     <y>460</y>
+     <x>380</x>
+     <y>490</y>
      <width>193</width>
      <height>28</height>
     </rect>
@@ -49,96 +26,341 @@
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
    </property>
   </widget>
-  <widget class="QLabel" name="label_2">
+  <widget class="QTabWidget" name="tabWidget">
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>100</y>
-     <width>201</width>
-     <height>21</height>
+     <y>20</y>
+     <width>341</width>
+     <height>451</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Border Layer</string>
+   <property name="currentIndex">
+    <number>0</number>
+   </property>
+   <widget class="QWidget" name="WalkabilityTab">
+    <attribute name="title">
+     <string>Walkability</string>
+    </attribute>
+    <widget class="QgsMapLayerComboBox" name="comboBoxShadedLayer">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>180</y>
+       <width>201</width>
+       <height>27</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>201</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Border Layer</string>
+     </property>
+    </widget>
+    <widget class="QgsMapLayerComboBox" name="comboBoxRoadsLayer">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>201</width>
+       <height>27</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>160</y>
+       <width>201</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Shaded Layer</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>201</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Roads Layer</string>
+     </property>
+    </widget>
+    <widget class="QgsMapLayerComboBox" name="comboBoxBorderLayer">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>110</y>
+       <width>201</width>
+       <height>27</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="sidewalks_layer_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>250</y>
+       <width>201</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Sidewalks Layer</string>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="SidewalkcheckBox">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>220</y>
+       <width>261</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Use Your Own Sidewalks Layer</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <property name="autoRepeat">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="ComboBoxSidewalksLayer">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>270</y>
+       <width>201</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="editable">
+      <bool>false</bool>
+     </property>
+     <property name="duplicatesEnabled">
+      <bool>false</bool>
+     </property>
+     <property name="frame">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="BuildingscheckBox">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>310</y>
+       <width>261</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Generate Shades from buildings</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <property name="autoRepeat">
+      <bool>false</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="building_layer_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>340</y>
+       <width>201</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>buildings Layer</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBoxBuildingLayer">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>360</y>
+       <width>201</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="editable">
+      <bool>false</bool>
+     </property>
+     <property name="duplicatesEnabled">
+      <bool>false</bool>
+     </property>
+     <property name="frame">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab_2">
+    <attribute name="title">
+     <string>Demand</string>
+    </attribute>
+    <widget class="QgsMapLayerComboBox" name="comboBoxTransportLayer">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>100</y>
+       <width>201</width>
+       <height>27</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_5">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>80</y>
+       <width>201</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Transport Layer</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>201</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Institute Layer</string>
+     </property>
+    </widget>
+    <widget class="QgsMapLayerComboBox" name="comboBoxInstituteLayer">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>201</width>
+       <height>27</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="poi_weight">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>30</y>
+       <width>51</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="decimals">
+      <number>1</number>
+     </property>
+     <property name="minimum">
+      <double>0.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>1.000000000000000</double>
+     </property>
+     <property name="singleStep">
+      <double>0.100000000000000</double>
+     </property>
+     <property name="value">
+      <double>0.500000000000000</double>
+     </property>
+    </widget>
+    <widget class="QDoubleSpinBox" name="translate_weight">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>100</y>
+       <width>51</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="decimals">
+      <number>1</number>
+     </property>
+     <property name="minimum">
+      <double>0.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>1.000000000000000</double>
+     </property>
+     <property name="singleStep">
+      <double>0.100000000000000</double>
+     </property>
+     <property name="value">
+      <double>0.500000000000000</double>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QTextBrowser" name="textBrowserToolDesc">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>40</y>
+     <width>161</width>
+     <height>431</height>
+    </rect>
    </property>
   </widget>
-  <widget class="QgsMapLayerComboBox" name="comboBoxBorderLayer">
+  <widget class="QProgressBar" name="progressBar">
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>120</y>
-     <width>201</width>
-     <height>27</height>
+     <y>490</y>
+     <width>341</width>
+     <height>31</height>
     </rect>
    </property>
-  </widget>
-  <widget class="QLabel" name="label_3">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>170</y>
-     <width>201</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Shaded Layer</string>
-   </property>
-  </widget>
-  <widget class="QgsMapLayerComboBox" name="comboBoxShadedLayer">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>190</y>
-     <width>201</width>
-     <height>27</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QgsMapLayerComboBox" name="comboBoxInstituteLayer">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>260</y>
-     <width>201</width>
-     <height>27</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_4">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>240</y>
-     <width>201</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Institute Layer</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_5">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>310</y>
-     <width>201</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Transport Layer</string>
-   </property>
-  </widget>
-  <widget class="QgsMapLayerComboBox" name="comboBoxTransportLayer">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>330</y>
-     <width>201</width>
-     <height>27</height>
-    </rect>
+   <property name="value">
+    <number>0</number>
    </property>
   </widget>
  </widget>
@@ -180,6 +402,70 @@
     <hint type="destinationlabel">
      <x>221</x>
      <y>132</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>SidewalkcheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ComboBoxSidewalksLayer</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>160</x>
+     <y>399</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>130</x>
+     <y>433</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BuildingscheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>comboBoxBuildingLayer</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>192</x>
+     <y>364</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>162</x>
+     <y>418</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>SidewalkcheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>sidewalks_layer_label</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>192</x>
+     <y>274</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>162</x>
+     <y>302</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>BuildingscheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>building_layer_label</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>192</x>
+     <y>364</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>162</x>
+     <y>392</y>
     </hint>
    </hints>
   </connection>

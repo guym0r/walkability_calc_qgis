@@ -19,4 +19,6 @@ ZS_MEAN = 2
 #WALK_CALC_EXPRESSION = '0.2 *(pois_mean - minimum(pois_mean)) / (maximum(pois_mean) - minimum(pois_mean))  + 0.2 *(tran_mean - minimum(tran_mean))/( maximum(tran_mean) - minimum(tran_mean)) + 0.6 *( shade_sum - minimum(shade_sum)) / ( maximum(shade_sum) - minimum(shade_sum))'
 
 #WALK_CALC_EXPRESSION = '0.2 *("poi_mean" - min("poi_mean")) / (max("poi_mean") - min("poi_mean")) + 0.2 *("tr_mean" - min("tr_mean"))/( max("tr_mean") - min("tr_mean")) + 0.6 *("shade_sum" - min("shade_sum")) / ( max("shade_sum") - min("shade_sum"))'
-WALK_CALC_EXPRESSION = '"poi_mean"'
+WALK_CALC_EXPRESSION = 'minimum("poi_mean")'
+
+#WALK_CALC_EXPRESSION = '0.2 *(pois_mean - minimum(pois_mean)) / (maximum(pois_mean) - minimum(pois_mean))  + 0.2 *(tran_mean - minimum(tran_mean))/( maximum(tran_mean) - minimum(tran_mean)) + 0.6 *( shade_sum - minimum(shade_sum)) / ( maximum(shade_sum) - minimum(shade_sum))'

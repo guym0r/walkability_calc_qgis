@@ -103,24 +103,40 @@ def _zonal_statistics(output_layer_name, vector_layer, raster_layer, attribute_p
 
     return result_layer
 
+# Expressions
+
+def _find_attr_min_max_value(input_layer, attr_name):
+    min_val = 10000000000000 # FIX
+    max_val = 0
+    attr_idx = input_layer.fields().lookupField(attr_name)
+    for f in input_layer.getFeatures():
+        if (f[attr_idx] < min_val):
+            min_val = f[attr_idx]
+        if (f[attr_idx] > max_val):
+            max_val = f[attr_idx]
+
+    return min_val, max_val
+
 def _add_field_by_expression(input_layer, new_attr_name, new_attr_type, expression):
     counter = 0
 
     input_layer.startEditing()
-    data_provider = input_layer.dataProvider()
-    data_provider.addAttributes([QgsField(new_attr_name, new_attr_type)])
-    input_layer.updateFields()
+    input_layer.addAttribute(QgsField(new_attr_name, new_attr_type))
+    input_layer.commitChanges()
     
+    input_layer.startEditing()
     context = QgsExpressionContext() # TODO check if need context
-    context.appendScopes(QgsExpressionContextUtils.globalProjectLayerScopes(input_layer))
+    context.setFields(input_layer.fields())
+    attr_idx = input_layer.fields().lookupField(new_attr_name)
+
     for f in input_layer.getFeatures():
         context.setFeature(f)
         temp = expression.evaluate(context)
-        if counter % 30 == 0:
+        if counter % 200 == 0:
             print(temp)
-        f[new_attr_name] = temp
+        f[attr_idx] = temp
         input_layer.updateFeature(f)
-        counter+= 1
+        counter += 1
 
     input_layer.commitChanges()
     print(input_layer.name())

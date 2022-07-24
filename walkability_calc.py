@@ -251,6 +251,12 @@ class WalkabilityCalc:
             self.dlg.comboBoxShadedLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
             self.dlg.comboBoxInstituteLayer.setFilters(QgsMapLayerProxyModel.PointLayer)
             self.dlg.comboBoxTransportLayer.setFilters(QgsMapLayerProxyModel.PointLayer)
+            
+            self.dlg.building_layer_label.hide()
+            self.dlg.comboBoxBuildingLayer.hide()
+            self.dlg.sidewalks_layer_label.hide()
+            self.dlg.ComboBoxSidewalksLayer.hide()
+
             # TODO!!! use CRS from user input
 
         # show the dialog
